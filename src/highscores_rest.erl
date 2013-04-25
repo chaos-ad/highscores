@@ -7,7 +7,7 @@ init(_Transport, _Req, []) ->
     {upgrade, protocol, cowboy_rest}.
 
 allowed_methods(Req, State) ->
-    {[<<"GET">>, <<"POST">>], Req, State}.
+    {[<<"GET">>, <<"POST">>, <<"DELETE">>], Req, State}.
 
 content_types_provided(Req, State) ->
     {[{{<<"text">>, <<"plain">>, []}, to_text}], Req, State}.
@@ -41,6 +41,13 @@ from_text(Req, OldScore) ->
             {false, Req3, OldScore}
     end.
 
+delete_resource(Req, OldScore) ->
+    {Level, Req1} = cowboy_req:binding(level, Req),
+    {UserID, Req2} = cowboy_req:binding(userid, Req1),
+    lager:debug("Deleting highscores for ~p/~p (~p)...", [UserID, Level, OldScore]),
+    ok = del_highscores(UserID, Level),
+    {true, Req2, OldScore}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 set_highscores(UserID, Level, Scores) when is_integer(Level), is_integer(Scores) ->
@@ -60,6 +67,13 @@ get_highscores(UserID, Level) when is_integer(Level) ->
         {ok, {{_, 200, _}, _, Data}} -> list_to_integer(Data)
     end.
 
+del_highscores(UserID, Level) when is_integer(Level) ->
+    {Host, Port} = get_riak_endpoint(),
+    Template = "http://~s:~B/riak/highscores/~s-~B",
+    URL = lists:flatten(io_lib:format(Template, [Host, Port, UserID, Level])),
+    case httpc:request(delete, {URL, []}, [], []) of
+        {ok, {{_, 204, _}, _, _}} -> ok
+    end.
 
 get_riak_endpoint() ->
     case application:get_env(highscores, riak_nodes) of
