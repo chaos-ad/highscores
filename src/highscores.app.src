@@ -1,0 +1,21 @@
+{application, highscores, [
+    {description, ""},
+    {vsn, git},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        inets,
+        lager,
+        cowboy
+    ]},
+    {mod, { highscores_app, [] }},
+    {env, [
+        {bind_host, {0,0,0,0}},
+        {bind_port, 8080},
+        {acceptors, 5},
+        {riak_nodes, [
+            {"localhost", 8098}
+        ]}
+    ]}
+]}.
